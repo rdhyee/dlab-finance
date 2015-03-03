@@ -1,0 +1,13 @@
+module load python/2.7.8
+module load scikit-learn
+
+module load matplotlib
+module load pandas
+module load ipython
+module load jinja2
+module load pyzmq
+module load tornado
+module load tables
+
+export TRADEDATA="/global/scratch/aculich/mirror/EQY_US_ALL_TRADE"
+export QUOTEDATA="/global/scratch/aculich/mirror/EQY_US_ALL_BBO"
