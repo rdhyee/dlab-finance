@@ -1,3 +1,6 @@
+# Project : Dlab-Finance Processing TAQ data
+# Desc : This is a test script to test reading and processing TAQ data with Spark
+
 import sys
 from random import random
 from operator import add
