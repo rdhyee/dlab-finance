@@ -25,8 +25,14 @@ if __name__ == "__main__":
 
     sc = SparkContext(appName="TAQProcessing")
     data = sc.textFile("/global/scratch/rsoni/testdata/taqtrade20100104")
-    records = data.map(lambda s: [s[:9],s[9:10],s[10:26],s[26:30],s[30:39],s[39:50],s[50:51],s[51:53],s[53:69],s[69:70],s[70:71],s[71:73]])
+    records = data.map(lambda s: [s[:9],s[9:10],s[10:26].strip(),s[26:30],int(s[30:39]),float(s[39:50])/10000.0,s[50:51],s[51:53],s[53:69],s[69:70],s[70:71],s[71:73]])
     saperec = records.filter(lambda rec: rec[2][:4]=='SAPE')
-    # print records.take(5)
+    print records.take(5)
     print records.count()
+    
+
     print saperec.count()
+
+    # This next line has trouble executing so commenting it out for now.
+    for rec in saperec.take(5):
+        print rec
