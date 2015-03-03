@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Usage : ./runjob <script>
+# Example : ./runjob taq.py
+
+
 CURRDIR=$PWD
 
 source /global/home/groups/allhands/bin/spark_helper.sh
