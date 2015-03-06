@@ -9,7 +9,7 @@
 
 from pyspark import *
 
-sc = SparkContext("local[4]")
+sc = SparkContext()
 
 rdd = sc.newAPIHadoopFile(
         "data",
