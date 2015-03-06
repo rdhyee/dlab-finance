@@ -1,3 +1,4 @@
+# Best to source this from bashrc instead of copying, so you'll pick up changes
 module load python/2.7.8
 module load scikit-learn
 

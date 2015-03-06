@@ -4,6 +4,9 @@
 # The `hadoop-zip.jar` file was built from the code at:
 #   https://github.com/cotdp/com-cotdp-hadoop
 #
+# You can build it by running `mvn package` from within the cloned repository,
+# the jar will show up in the ./target directory.
+#
 # This example expects the `data/` directory to contain zip
 # files with text files containing one record per line.
 
