@@ -80,8 +80,8 @@ class BBids:
             if curr_permno is None:
                 # Our first security
                 curr_permno = permno
-                # Might want to change to use the logging module
-                # print permno, row[sym_root]
+                # This now works nicely with Slurm
+                print permno, row[sym_root]
                 out_row = self.permno_row(permno)
 
                 # We keep track of how many stocks we've seen so we can quit
@@ -97,7 +97,7 @@ class BBids:
                     # it just starts returning empty rows
                     break
                 curr_permno = permno
-                # print permno, row[sym_root]
+                print permno, row[sym_root]
                 curr_time = None
                 out_row = self.permno_row(permno)
 
@@ -136,5 +136,7 @@ if __name__ == '__main__':
 
     tock = datetime.now()
 
-    with open('{}_elapsed.txt'.format(argv[1]), 'w') as f:
-        f.write('Elapsed time: {}\n'.format(tock - tick))
+    # with open('{}_elapsed.txt'.format(argv[1]), 'w') as f:
+    #     f.write('Elapsed time: {}\n'.format(tock - tick))
+
+    print 'Elapsed time: {}\n'.format(tock - tick)
