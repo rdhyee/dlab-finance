@@ -106,7 +106,9 @@ class BBids:
                 self.record_time(out_row, curr_time)
 
             # Keep track of max bid per exchange from this millisecond
-            # Default is np.nan
+            # Default is np.nan in our HDF5 row
+            # Some rows from Justin's file are 0.0, which should probably be
+            # treated specially
             ex = row[EX]
             if out_row[ex] == np.nan:
                 out_row[ex] = row[BID]
@@ -117,8 +119,14 @@ if __name__ == '__main__':
     from sys import argv
 
     tick = datetime.now()
-    bbids = BBids('./sas_data/cqm_{}.sas7bdat'.format(argv[1]))
-    bbids.best_per_exchange('nbbo_{}.h5'.format(argv[1]))
+
+    sourcefiles_path = '/global/scratch/jmccrary/jmccrary/cqm_{}.sas7bdat'
+    bbids = BBids(sourcefiles_path.format(argv[1]))
+
+    output_path = '/global/scratch/davclark/benchmarking_data/nbbo_{}.h5'
+    bbids.best_per_exchange(output_path.format(argv[1]))
+
     tock = datetime.now()
 
-    print 'Elapsed time:', tick - tock
+    with open('{}_elapsed.txt', 'w') as f:
+        f.write('Elapsed time: {}\n'.format(tick - tock))
