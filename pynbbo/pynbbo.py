@@ -92,7 +92,7 @@ class BBids:
                 out_row.append()
                 num_seen += 1
 
-                if permno == 0.0 or num_seen > 10:
+                if permno == 0.0 or num_seen > 25:
                     # sas7bdat doesn't raise a StopIteration exception
                     # it just starts returning empty rows
                     break
