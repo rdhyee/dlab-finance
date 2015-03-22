@@ -121,6 +121,8 @@ class BBids:
             elif out_row[ex] < row[BID]:
                 out_row[ex] = row[BID]
 
+        self.h5f.close()
+
 if __name__ == '__main__':
     from sys import argv
 
@@ -134,5 +136,5 @@ if __name__ == '__main__':
 
     tock = datetime.now()
 
-    with open('{}_elapsed.txt', 'w') as f:
-        f.write('Elapsed time: {}\n'.format(tick - tock))
+    with open('{}_elapsed.txt'.format(argv[1]), 'w') as f:
+        f.write('Elapsed time: {}\n'.format(tock - tick))
