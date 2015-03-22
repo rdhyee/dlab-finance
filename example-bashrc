@@ -9,6 +9,7 @@ module load jinja2
 module load pyzmq
 module load tornado
 module load tables
+module load pytz
 
 export TRADEDATA="/global/scratch/aculich/mirror/EQY_US_ALL_TRADE"
 export QUOTEDATA="/global/scratch/aculich/mirror/EQY_US_ALL_BBO"
