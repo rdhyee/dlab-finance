@@ -67,7 +67,7 @@ class BBids:
                              time.second)
         row['time_mtrail'] = time.microsecond / 1000
 
-    def best_per_exchange(self, h5name):
+    def best_per_exchange(self, h5name):  #noqa
         '''compute a row for each present millisecond with max trades'''
         self.h5f = tbl.open_file(h5name, mode="w",
                                  title="Best bid per exchange")
@@ -83,10 +83,16 @@ class BBids:
                 # Might want to change to use the logging module
                 # print permno, row[sym_root]
                 out_row = self.permno_row(permno)
+
+                # We keep track of how many stocks we've seen so we can quit
+                # early
+                num_seen = 1
             elif curr_permno != permno:
                 # We have a new security
                 out_row.append()
-                if permno == 0.0:
+                num_seen += 1
+
+                if permno == 0.0 or num_seen > 10:
                     # sas7bdat doesn't raise a StopIteration exception
                     # it just starts returning empty rows
                     break
