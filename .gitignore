@@ -54,3 +54,5 @@ docs/_build/
 target/
 # We don't want to track sbatch outputs
 *.out
+
+sas_data/
