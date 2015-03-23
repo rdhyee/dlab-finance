@@ -26,33 +26,50 @@ fields of dailyquotes file taqquote
 [90] text Retail interest indicator
 [...]
 '''
+#spark-submit --master spark://npatwa91.softlayer.com:7077 --driver-memory 4G --executor-memory 4G nbbo_npatwa.py
+#spark-submit --master spark://npatwa91.softlayer.com:7077 --conf spark.driver.memory=4G --conf spark.executor.memory=4G 
+
 from pyspark import *
 
-sc = SparkContext()
+conf = new SparkConf()
+conf.set("spark.app.name", "nbbo_npatwa")
+#conf.set("spark.master", "spark://npatwa91.softlayer.com:7077")
+#conf.set("spark.driver.memory", "4G")
+#conf.set("spark.executor.memory", "4G")
 
+sc = SparkContext(conf = conf)
 
-def edgedtct(mylist):
+#Pyspark program starts here
+#pyspark --master spark://npatwa91.softlayer.com:7077 --driver-memory 4G --executor-memory 4G
+
+HFTH = 50
+stock = 'AAPL'
+
+def crossings_cnt(mytuple):
+    #mytuple: ([(ms1, p1), (ms2, p2)..], avg)
+    avg = mytuple[1]
+    mylist = mytuple[0]
     edgecnt = 0
-    dir = 2
-    mylist.sort(key=lambda tup: tup[0] [0])
-    avg = mylist[0] [1]
-    for i in range(len(mylist)):
-        price = mylist[i] [0] [1]
+    direction = 2 # undefined
+    mylistsorted = sorted(mylist, key=lambda rec: rec[0])
+    for i in range(len(mylistsorted)):
+        price = mylist[i] [1]
         if (price > avg):
-            newdir = 1
+            newdir = 1   # upper half
         else:
-            newdir = 0
-        if (dir != 2) and (newdir != dir):
+            newdir = 0   # lower half
+        if (direction != 2) and (newdir != direction):
             edgecnt = edgecnt + 1
-        dir = newdir
+        direction = newdir
     return(edgecnt)
 
 
+
 RDD = sc.textFile("hdfs://npatwa91:54310/w251/final/taqquote20131218")
-stockRDD = RDD.filter(lambda line: 'AAPL' in line)
+stockRDD = RDD.filter(lambda line: stock in line)
 records = stockRDD.map(lambda line: [line[0:9], line[9], line[10:26].strip(), float(line[26:37])/10000, int(line[37:44]), float(line[44:55])/10000, int(line[55:62]), line[62]])
 # find records for the given stock
-apple = records.filter(lambda rec: 'AAPL' in rec[2])
+apple = records.filter(lambda rec: stock in rec[2])
 
 # create k-v for exchange etc for examining data
 #appleexch = apple.map(lambda rec: (rec[1], rec)) # key is the exchange
@@ -65,46 +82,62 @@ bid = apple.map(lambda rec: (rec[0], rec[3]))
 ask = apple.map(lambda rec: (rec[0], rec[5]))
 
 # find max bid and min ask for every milli second - they are best bid and best ask
-bestbid = bid.reduceByKey(max)
-#bestbid = bestbid.sortByKey()
+bestbid = bid.reduceByKey(max)  #format: key=millisecond value=max-price
+bestask = ask.reduceByKey(min)  #format: key=millisecond, value=min-price
+nbbo = bestbid.join(bestask)   #format: key=millisecond, value=(max-bid, min-ask)
 
-bestask = ask.reduceByKey(min)
-#bestask = bestask.sortByKey()
-nbbo = bestbid.join(bestask)
-print nbbo.take(10)# nbbo was no longer sorted.
+nbbo.saveAsTextFile("hdfs://npatwa91:54310/w251/final/nbbo")
+
 
 # find average values over a second of best bid and best ask
-bbsec = bestbid.map(lambda rec: (rec[0] [0:6], rec[1]))  #bbsec is loosing millisecond value
-#bbsec = bbsec.sortByKey()
-bbsecagg = bbsec.mapValues(lambda x: (x, 1)).reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1]))
+bbsec = bestbid.map(lambda rec: (rec[0] [0:6], rec[1]))  #key=sec, value=min-price
+bbsecagg = bbsec.mapValues(lambda x: (x, 1)).reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1]))  #append count and then total
 bbsecavg = bbsecagg.map(lambda rec: (rec[0], (rec[1] [0])/(rec[1] [1])))
-#bbsecavg = bbsecavg.sortByKey()
 
 basec = bestask.map(lambda rec: (rec[0] [0:6], rec[1]))
-#bbsec = basec.sortByKey()
 basecagg = basec.mapValues(lambda x: (x, 1)).reduceByKey(lambda x, y: (x[0] + y[0], x[1] + y[1]))
 basecavg = basecagg.map(lambda rec: (rec[0], (rec[1] [0])/(rec[1] [1])))
-#basecavg = basecsvg.sortByKey()
 
-# find number of times each second the best bid and best ask crosses the average
-# bbsec is a list every second, bbsecavg is bestbid average every second
-# produce bbcross which is (second, #of bb crossings)
+# go back to bestbid millisecond and create a second key, but maintain millisecond value
+# IMPORTANT: create a list object with tuple inside to allow + operator in reduce function to work
+
+bestbidsec = bestbid.map(lambda rec: (rec[0] [0:6], [(rec[0], rec[1])]))  #key=second, value = (ms, value)
+bestasksec = bestask.map(lambda rec: (rec[0] [0:6], [(rec[0], rec[1])]))
+bestbidlist = bestbidsec.reduceByKey(lambda x, y: x + y)   #list addition, this will fuse the records
+#bestbidlist = bestbidsec.reduceByKey(lambda x, y: [x[0] + y[0], x[1] + y[1]])   #list addition, this will fuse the records
+bestasklist = bestasksec.reduceByKey(lambda x, y: x + y)
 
 # join so that you get (sec, (best ms, secavg)) 
-bestbidsec = bestbid.map(lambda rec: (rec[0] [0:6], rec))  #key=second, value = (ms, value)
-bestasksec = bestask.map(lambda rec: (rec[0] [0:6], rec))
+bbjoin = bestbidlist.join(bbsecavg)  # key=second, value = ([(ms1, value1), (ms2, value2), (ms3, value3)], avg)
+bajoin = bestasklist.join(basecavg)
 
-bbjoin = bestbidsec.join(bbsecavg)  # key=second, value = ((ms, value), avg)
-bajoin = bestasksec.join(basecavg)
+#groupBy is going to collect all values of a key and send them to one node.
+#     Spark does not recommend using it, but often one needs sorted value list to operate on.
+#     crossingscnt is that task
+#reduceBy/aggregateBy is going to do combining at the source node and then send results to one node. 
+#     Above works well for aggregate functions that can be done in parallel, e.g. count, min, max
+#combineByKey is more general function. 
+#createCombiner
+#mergeValue
+#mergeCombiner
 
-bblist = bbjoin.groupByKey() # key=second, value = list [((ms, value), avg), ((ms, value), avg)]
-balist = bajoin.groupByKey()
-bbfreq = bblist.mapValues(edgedtct) # value = #of edges
-bafreq = balist.mapValues(edgedtct)
+# find number of times each second the best bid and best ask crosses the average
+bbfreq = bbjoin.mapValues(crossings_cnt) # value = #of crossings
+bafreq = bajoin.mapValues(crossings_cnt)
 
-nbbofreq = bbfreq.join(bafreq)
+# filter seconds where crossings_count exceed the threshold 
+bbfreqgth = bbfreq.filter(lambda rec: rec[1] > HFTH).sortByKey()
+bafreqgth = bafreq.filter(lambda rec: rec[1] > HFTH).sortByKey()
 
-nbbofinal = nbbo.join(nbbofreq)
-nbbofinal = nbbofinal.sortByKey()
+bbfreqgth.saveAsTextFile("hdfs://npatwa91:54310/w251/final/bbfreqgth.txt")
+bafreqgth.saveAsTextFile("hdfs://npatwa91:54310/w251/final/bafreqgth.txt")
 
-nbbofinal.saveAsTextFile("hdfs://npatwa91:54310/w251/final/nbbofinal.txt")
+
+# create a per-second record of NBBO and #of crossings around average
+
+nbbofreq = bbfreq.join(bafreq) # create a value tuple tuple (#of crossings best-bid, #of crossings best-ask)
+nbboavg  = bbsec.join(basec)   # average per second of best bid and best ask
+nbbosec = nbboavg.join(nbbofreq) # create a tuple of ((avg-best-bid, avg-best-ask), (#of crossings best-bid, #of crossings best-ask))
+nbbosec = nbbosec.sortByKey() # created sorted list
+
+nbbosec.saveAsTextFile("hdfs://npatwa91:54310/w251/final/nbbosec_avg_freq")
