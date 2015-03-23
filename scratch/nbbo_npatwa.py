@@ -41,7 +41,9 @@ sc = SparkContext(conf = conf)
 
 #Pyspark program starts here
 #pyspark --master spark://npatwa91.softlayer.com:7077 --driver-memory 4G --executor-memory 4G
+import sys
 
+if len(sys.argv) > 2
 HFTH = 50
 stock = 'AAPL'
 
@@ -126,18 +128,47 @@ bbfreq = bbjoin.mapValues(crossings_cnt) # value = #of crossings
 bafreq = bajoin.mapValues(crossings_cnt)
 
 # filter seconds where crossings_count exceed the threshold 
-bbfreqgth = bbfreq.filter(lambda rec: rec[1] > HFTH).sortByKey()
-bafreqgth = bafreq.filter(lambda rec: rec[1] > HFTH).sortByKey()
+bbfreqgth = bbfreq.filter(lambda rec: rec[1] > HFTH).sortByKey().collect()
+bafreqgth = bafreq.filter(lambda rec: rec[1] > HFTH).sortByKey().collect()
 
-bbfreqgth.saveAsTextFile("hdfs://npatwa91:54310/w251/final/bbfreqgth.txt")
-bafreqgth.saveAsTextFile("hdfs://npatwa91:54310/w251/final/bafreqgth.txt")
+fp = open("nbbo_alerts.txt", "w")
+print >>fp, "Best Buy High Frequency Alerts\n"
+print >>fp, bbfreqgth
+for i in range(len(bbfreqgth)):
+    localkey = bbfreqgth[i] [0]
+    localvalues = bbjoin.lookup(localkey)[0]  # get a tuple ([(ms, price), (ms, price), ...], avg)
+    localavg = localvalues[1]
+    locallist = sorted(localvalues[0], key=lambda rec: rec[0])
+    print >>fp, "Analysis"
+    print >>fp, localkey, localavg
+    for j in range(len(locallist)):
+        locallist[j] [1] = format(locallist[j] [1], '0.3f') 
+        print >>fp, locallist[j]
+
+print >>fp, "\nBest Ask High Frequency Alerts\n"
+print >>fp, bafreqgth
+fp.close()
+
+#if collect was not used, this can be used
+#bbfreqgth.saveAsTextFile("hdfs://npatwa91:54310/w251/final/bbfreqgth")
+#bafreqgth.saveAsTextFile("hdfs://npatwa91:54310/w251/final/bafreqgth")
 
 
 # create a per-second record of NBBO and #of crossings around average
 
 nbbofreq = bbfreq.join(bafreq) # create a value tuple tuple (#of crossings best-bid, #of crossings best-ask)
-nbboavg  = bbsec.join(basec)   # average per second of best bid and best ask
+nbboavg  = bbsecavg.join(basecavg)   # average per second of best bid and best ask
 nbbosec = nbboavg.join(nbbofreq) # create a tuple of ((avg-best-bid, avg-best-ask), (#of crossings best-bid, #of crossings best-ask))
 nbbosec = nbbosec.sortByKey() # created sorted list
+nbbo_secsummary = nbbosec.collect()
 
-nbbosec.saveAsTextFile("hdfs://npatwa91:54310/w251/final/nbbosec_avg_freq")
+fp = open("nbbo_secsummary.txt", "w")
+print >>fp, "(second, ((avg best buy, avg best ask), (#crossings best buy, #crossings best ask)))\n"
+for i in range(len(nbbo_secsummary)):
+    nbbo_secsummary[i] [1] [0] [0] = format(nbbo_secsummary[i] [1] [0] [0], '0.3f')
+    nbbo_secsummary[i] [1] [0] [1] = format(nbbo_secsummary[i] [1] [0] [1], '0.3f')
+    print >>fp, nbbo_secsummary[i] 
+fp.close()
+
+#if collect was not used, this an be used
+#nbbosec.saveAsTextFile("hdfs://npatwa91:54310/w251/final/nbbosec_avg_freq")
