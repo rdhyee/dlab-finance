@@ -1,9 +1,24 @@
 '''
+Usage:  nbbo_hfa.py stock-ticker high-freq-threshold quote-file nbbo-dir
+example: nbbo.py FB 30 hdfs://npatwa91.54310/w251/final/nbbo
+If high-freq-threshold is not provided, 50 is default.
+If stock-ticker is not provided, "AAPL" is default
+If quote-file is not provided, "hdfs://npatwa91:54310/w251/final/taqquote20131218" is default.
+If nbbo-dir is not provided, "hdfs://npatwa91.54310/w251/final/nbbo" is default
+
+Output: nbbo  //NBBO (ms, (best-bid-price, best-ask-price)) HDFS file 
+        nbbo_alerts.txt //alerts of HFT, unix file on driver
+        nbbo_secsummary //per-second summary of avg best-bid, best-ask and #of crossings, unix file on driver
+
 This program examines dailyquotes file for a particular stock,
-finds best bid and best ask every milliseconds, prints nbbo tuple.
-It then finds average of best bid and best ask every second.
-Lastly it finds #of times within each second the best bid and best ask crosses the average,
-which is indicative of high-frequency trading
+finds best bid and best ask every milliseconds, generates an nbbo file in HDFS
+It then finds average of best bid and best ask every second and then
+finds #of times within each second the best bid and best ask crosses the average,
+which is indicative of high-frequency trading. This count is compared against 
+the threshold and the program prints the seconds during which the number of crossings 
+exceed the threshold.
+
+
 
 REF:
 fields of dailyquotes file taqquote
@@ -29,23 +44,45 @@ fields of dailyquotes file taqquote
 #spark-submit --master spark://npatwa91.softlayer.com:7077 --driver-memory 4G --executor-memory 4G nbbo_npatwa.py
 #spark-submit --master spark://npatwa91.softlayer.com:7077 --conf spark.driver.memory=4G --conf spark.executor.memory=4G 
 
-from pyspark import *
+from pyspark import SparkContext, SparkConf
 
-conf = new SparkConf()
-conf.set("spark.app.name", "nbbo_npatwa")
+conf = SparkConf().setAppName("nbbo_hfalert")
 #conf.set("spark.master", "spark://npatwa91.softlayer.com:7077")
 #conf.set("spark.driver.memory", "4G")
 #conf.set("spark.executor.memory", "4G")
 
 sc = SparkContext(conf = conf)
 
-#Pyspark program starts here
+# P Y S P A R K 
 #pyspark --master spark://npatwa91.softlayer.com:7077 --driver-memory 4G --executor-memory 4G
+#----------------------------------------------------------------------------------------------------
+
 import sys
 
-if len(sys.argv) > 2
+#defaults
+
+stock = "AAPL"
 HFTH = 50
-stock = 'AAPL'
+quotefile = "hdfs://npatwa91:54310/w251/final/taqquote20131218"
+nbbo_dir = "hdfs://npatwa91:54310/w251/final/nbbo"
+
+if (len(sys.argv) == 5):
+    stock = str(sys.argv[1])
+    HFTH = int(sys.argv[2])
+    quotefile = str(sys.argv[3]) 
+    nbbo_dir = str(sys.argv[4]) 
+if (len(sys.argv) == 4):
+    stock = str(sys.argv[1])
+    HFTH = int(sys.argv[2])
+    quotefile == str(sys.argv[3]) 
+if (len(sys.argv) == 3): 
+    stock = str(sys.argv[1])
+    HFTH = int(sys.argv[2])
+elif (len(sys.argv) == 2):
+    stock = str(sys.argv[1])
+else:
+    print ("Using defaults for arguments.\n")
+
 
 def crossings_cnt(mytuple):
     #mytuple: ([(ms1, p1), (ms2, p2)..], avg)
@@ -67,7 +104,8 @@ def crossings_cnt(mytuple):
 
 
 
-RDD = sc.textFile("hdfs://npatwa91:54310/w251/final/taqquote20131218")
+RDD = sc.textFile(quotefile)
+
 stockRDD = RDD.filter(lambda line: stock in line)
 records = stockRDD.map(lambda line: [line[0:9], line[9], line[10:26].strip(), float(line[26:37])/10000, int(line[37:44]), float(line[44:55])/10000, int(line[55:62]), line[62]])
 # find records for the given stock
@@ -88,7 +126,7 @@ bestbid = bid.reduceByKey(max)  #format: key=millisecond value=max-price
 bestask = ask.reduceByKey(min)  #format: key=millisecond, value=min-price
 nbbo = bestbid.join(bestask)   #format: key=millisecond, value=(max-bid, min-ask)
 
-nbbo.saveAsTextFile("hdfs://npatwa91:54310/w251/final/nbbo")
+nbbo.saveAsTextFile(nbbo_dir)
 
 
 # find average values over a second of best bid and best ask
@@ -131,22 +169,32 @@ bafreq = bajoin.mapValues(crossings_cnt)
 bbfreqgth = bbfreq.filter(lambda rec: rec[1] > HFTH).sortByKey().collect()
 bafreqgth = bafreq.filter(lambda rec: rec[1] > HFTH).sortByKey().collect()
 
-fp = open("nbbo_alerts.txt", "w")
+fp = open("nbbo_alerts.txt", 'w')
 print >>fp, "Best Buy High Frequency Alerts\n"
-print >>fp, bbfreqgth
 for i in range(len(bbfreqgth)):
     localkey = bbfreqgth[i] [0]
+    localfreq = bbfreqgth[i] [1]
     localvalues = bbjoin.lookup(localkey)[0]  # get a tuple ([(ms, price), (ms, price), ...], avg)
     localavg = localvalues[1]
     locallist = sorted(localvalues[0], key=lambda rec: rec[0])
-    print >>fp, "Analysis"
-    print >>fp, localkey, localavg
+    print >>fp, "Second: ", localkey, "avg price: ", localavg, "#of crossings: ", localfreq
+    print >>fp, '\t', "millisecond", '\t', "price"
     for j in range(len(locallist)):
-        locallist[j] [1] = format(locallist[j] [1], '0.3f') 
-        print >>fp, locallist[j]
+        print >>fp, '\t', locallist[j] [0], '\t', format(locallist[j] [1], '0.3f') 
 
 print >>fp, "\nBest Ask High Frequency Alerts\n"
-print >>fp, bafreqgth
+
+for i in range(len(bafreqgth)):
+    localkey = bafreqgth[i] [0]
+    localfreq = bafreqgth[i] [1]
+    localvalues = bajoin.lookup(localkey)[0]  # get a tuple ([(ms, price), (ms, price), ...], avg)
+    localavg = localvalues[1]
+    locallist = sorted(localvalues[0], key=lambda rec: rec[0])
+    print >>fp, "Second: ", localkey, "avg price: ", localavg, "#of crossings: ", localfreq
+    print >>fp, '\t', "millisecond", '\t', "price"
+    for j in range(len(locallist)):
+        print >>fp, '\t', locallist[j] [0], '\t', format(locallist[j] [1], '0.3f') 
+
 fp.close()
 
 #if collect was not used, this can be used
@@ -162,12 +210,13 @@ nbbosec = nbboavg.join(nbbofreq) # create a tuple of ((avg-best-bid, avg-best-as
 nbbosec = nbbosec.sortByKey() # created sorted list
 nbbo_secsummary = nbbosec.collect()
 
-fp = open("nbbo_secsummary.txt", "w")
+fp = open("nbbo_secsummary.txt", 'w')
 print >>fp, "(second, ((avg best buy, avg best ask), (#crossings best buy, #crossings best ask)))\n"
 for i in range(len(nbbo_secsummary)):
-    nbbo_secsummary[i] [1] [0] [0] = format(nbbo_secsummary[i] [1] [0] [0], '0.3f')
-    nbbo_secsummary[i] [1] [0] [1] = format(nbbo_secsummary[i] [1] [0] [1], '0.3f')
+#    nbbo_secsummary[i] [1] [0] [0] = format(nbbo_secsummary[i] [1] [0] [0], '0.3f')
+#    nbbo_secsummary[i] [1] [0] [1] = format(nbbo_secsummary[i] [1] [0] [1], '0.3f')
     print >>fp, nbbo_secsummary[i] 
+
 fp.close()
 
 #if collect was not used, this an be used
