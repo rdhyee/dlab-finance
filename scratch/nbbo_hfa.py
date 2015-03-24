@@ -83,6 +83,9 @@ elif (len(sys.argv) == 2):
 else:
     print ("Using defaults for arguments.\n")
 
+nbbo_dir = nbbo_dir + "/" + stock
+alerts_file = "nbbo_alerts"+stock+".txt"
+summary_file = "nbbo_sec"+stock+".txt"
 
 def crossings_cnt(mytuple):
     #mytuple: ([(ms1, p1), (ms2, p2)..], avg)
@@ -169,7 +172,7 @@ bafreq = bajoin.mapValues(crossings_cnt)
 bbfreqgth = bbfreq.filter(lambda rec: rec[1] > HFTH).sortByKey().collect()
 bafreqgth = bafreq.filter(lambda rec: rec[1] > HFTH).sortByKey().collect()
 
-fp = open("nbbo_alerts.txt", 'w')
+fp = open(alerts_file, 'w')
 print >>fp, "Best Buy High Frequency Alerts\n"
 for i in range(len(bbfreqgth)):
     localkey = bbfreqgth[i] [0]
@@ -177,7 +180,7 @@ for i in range(len(bbfreqgth)):
     localvalues = bbjoin.lookup(localkey)[0]  # get a tuple ([(ms, price), (ms, price), ...], avg)
     localavg = localvalues[1]
     locallist = sorted(localvalues[0], key=lambda rec: rec[0])
-    print >>fp, "Second: ", localkey, "avg price: ", localavg, "#of crossings: ", localfreq
+    print >>fp, "Second:", localkey, "avg price:", format(localavg, '0.3f'), "#of crossings:", localfreq
     print >>fp, '\t', "millisecond", '\t', "price"
     for j in range(len(locallist)):
         print >>fp, '\t', locallist[j] [0], '\t', format(locallist[j] [1], '0.3f') 
@@ -210,7 +213,7 @@ nbbosec = nbboavg.join(nbbofreq) # create a tuple of ((avg-best-bid, avg-best-as
 nbbosec = nbbosec.sortByKey() # created sorted list
 nbbo_secsummary = nbbosec.collect()
 
-fp = open("nbbo_secsummary.txt", 'w')
+fp = open(summary_file, 'w')
 print >>fp, "(second, ((avg best buy, avg best ask), (#crossings best buy, #crossings best ask)))\n"
 for i in range(len(nbbo_secsummary)):
 #    nbbo_secsummary[i] [1] [0] [0] = format(nbbo_secsummary[i] [1] [0] [0], '0.3f')
