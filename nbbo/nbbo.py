@@ -45,11 +45,18 @@ def processquote (record):
     nbbolist=[]
     # Iterate over the list to calculate nbbo
     for i in range(len(list1)):
-        # set the latest bid and ask
+        # set the latest bid and ask if bid & ask are not zero and if bidsize and asksize are not zero
+        # Backout the bid or ask if either is 0
         if ((list1[i][3] != 0) & (list1[i][4] != 0)):
             bidList[exchangeList.index(list1[i][8])] = list1[i][3]
+        elif (list1[i][3] == 0):
+            bidList[exchangeList.index(list1[i][8])] = 0
+
         if ((list1[i][5] != 0) & (list1[i][6] != 0)):
             askList[exchangeList.index(list1[i][9])] = list1[i][5]
+        elif (list1[i][5] == 0):
+            askList[exchangeList.index(list1[i][9])] = sys.maxsize
+
         # calculate NBBO
         nbbolist.append((record[0],list1[i][0],max(bidList),min(askList)))
     return nbbolist

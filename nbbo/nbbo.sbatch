@@ -3,7 +3,7 @@
 #SBATCH --partition=savio
 #SBATCH --account=ac_dlab
 #SBATCH --qos=condo_dlab
-#SBATCH --nodes=3
+#SBATCH --nodes=4
 #SBATCH --time=02:00:00
 
 source /global/home/groups/allhands/bin/spark_helper.sh
