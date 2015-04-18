@@ -43,20 +43,20 @@ def processquote (record):
     for i in range(len(list1)):
         # set the latest bid and ask if bid & ask are not zero and if bidsize and asksize are not zero
         # Backout the bid or ask if either is 0
+        if ((list1[i][2] != 0) & (list1[i][3] != 0)):
+            bidList[exchangeList.index(list1[i][6])] = list1[i][2]
+        elif ((list1[i][2] == 0) or (list1[i][8] == 'B')):
+            bidList[exchangeList.index(list1[i][6])] = 0
         if ((list1[i][4] != 0) & (list1[i][5] != 0)):
-            bidList[exchangeList.index(list1[i][9])] = list1[i][4]
-        elif ((list1[i][4] == 0) or (list1[i][11] == 'B')):
-            bidList[exchangeList.index(list1[i][9])] = 0
-        if ((list1[i][6] != 0) & (list1[i][7] != 0)):
-            askList[exchangeList.index(list1[i][10])] = list1[i][6]
-        elif ((list1[i][6] == 0) or (list1[i][11] == 'B')):
-            askList[exchangeList.index(list1[i][10])] = sys.maxsize
+            askList[exchangeList.index(list1[i][7])] = list1[i][4]
+        elif ((list1[i][4] == 0) or (list1[i][8] == 'B')):
+            askList[exchangeList.index(list1[i][7])] = sys.maxsize
         # calculate NBBO
         if (max(bidList) > 0) or (min(askList) < sys.maxsize):
             # Output key Value pairs where
             # Key : (<Stock Ticker>, <Time in seconds>)
             # Value : (<record-index>,<bid-price>,<ask-price>,<best-bid>,<best-ask>)
-            nbbolist.append(((record[0],list1[i][2]),(list1[i][0],list1[i][4],list1[i][6],max(bidList),min(askList))))
+            nbbolist.append((record[0]+'\t'+list1[i][1],(list1[i][0],list1[i][2],list1[i][4],max(bidList),min(askList))))
     return nbbolist
 
 if __name__ == "__main__":
@@ -65,16 +65,26 @@ if __name__ == "__main__":
     data1 = sc.textFile(inputDir)
     data2 = data1.zipWithIndex()
     # data1 = data.filter(lambda line: line[10:26].strip() == 'AAPL')
+    # data3 = data2.map(lambda rec: (rec[0][10:26].strip(), 
+    #                                (rec[1],
+    #                                 int(rec[0][0:9]), 
+    #                                 int(rec[0][0:6]), 
+    #                                 int(rec[0][6:9]), 
+    #                                 float(rec[0][26:37])/10000,
+    #                                 int(rec[0][37:44]),
+    #                                 float(rec[0][44:55])/10000,
+    #                                 int(rec[0][55:62]),
+    #                                 rec[0][9],
+    #                                 rec[0][67],
+    #                                 rec[0][68],
+    #                                 rec[0][87]))).groupByKey()
     data3 = data2.map(lambda rec: (rec[0][10:26].strip(), 
                                    (rec[1],
-                                    int(rec[0][0:9]), 
-                                    int(rec[0][0:6]), 
-                                    int(rec[0][6:9]), 
+                                    rec[0][0:6], 
                                     float(rec[0][26:37])/10000,
                                     int(rec[0][37:44]),
                                     float(rec[0][44:55])/10000,
                                     int(rec[0][55:62]),
-                                    rec[0][9],
                                     rec[0][67],
                                     rec[0][68],
                                     rec[0][87]))).groupByKey()
