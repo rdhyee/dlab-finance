@@ -39,8 +39,16 @@ def processquote (record):
     bidList = [0]*len(exchangeList)
     askList = [sys.maxsize]*len(exchangeList)
     nbbolist=[]
+    idx=0
+    currtime=0
     # Iterate over the list to calculate nbbo
     for i in range(len(list1)):
+        if(currtime != int(list1[i][1])):
+            #new second interval
+            idx=0
+            currtime=int(list1[i][1])
+        else:
+            idx=idx+1
         # set the latest bid and ask if bid & ask are not zero and if bidsize and asksize are not zero
         # Backout the bid or ask if either is 0
         if ((list1[i][2] != 0) & (list1[i][3] != 0)):
@@ -56,7 +64,7 @@ def processquote (record):
             # Output key Value pairs where
             # Key : (<Stock Ticker>, <Time in seconds>)
             # Value : (<record-index>,<bid-price>,<ask-price>,<best-bid>,<best-ask>)
-            nbbolist.append((record[0]+'\t'+list1[i][1],(list1[i][0],list1[i][2],list1[i][4],max(bidList),min(askList))))
+            nbbolist.append((record[0]+'\t'+list1[i][1],(idx,list1[i][2],list1[i][4],max(bidList),min(askList))))
     return nbbolist
 
 if __name__ == "__main__":
