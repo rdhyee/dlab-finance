@@ -29,30 +29,39 @@ from operator import add
 from pyspark import SparkContext, SparkConf
 
 inputDir="/global/scratch/rsoni/testdata/quoteplain/"
-outputDir="/global/scratch/rsoni/testdata/nbbo/"
+outputDir="/global/scratch/rsoni/testdata/crossings/"
 threshold=10
 
 def crossings(list):
     # Calc avgbid
     NBBList = ([rec[1][3] for rec in list if rec[1][3] > 0])
-    avgBid = sum(NBBList)/float(len(NBBList))
+    if NBBList != []:
+        avgBid = sum(NBBList)/float(len(NBBList))
+    else:
+        avgBid = 0
     # Calc avg ask
     NBOList = ([rec[1][4] for rec in list if rec[1][4] < sys.maxsize])
-    avgAsk = sum(NBOList)/float(len(NBOList))
+    if NBOList != []:
+        avgAsk = sum(NBOList)/float(len(NBOList))
+    else:
+        avgAsk = 0
+    # Get Valid bids and offers
     bidList = [rec[1][1] for rec in list if rec[1][1] > 0]
     askList = [rec[1][2] for rec in list if rec[1][2] < sys.maxsize]
     crossBid=0
-    currBid=bidList[0]<avgBid
-    for i in range(len(bidList)):
-        if currBid != bidList[i]<avgBid:
-            crossBid = crossBid+1
-            currBid = not(currBid)
+    if (len(bidList) > 0):
+        currBid=bidList[0]<avgBid
+        for i in range(len(bidList)):
+            if currBid != bidList[i]<avgBid:
+                crossBid = crossBid+1
+                currBid = not(currBid)
     crossAsk=0
-    currAsk=askList[0]<avgAsk
-    for i in range(len(askList)):
-        if currAsk != askList[i]<avgAsk:
-            crossAsk = crossAsk+1
-            currAsk = not(currAsk)
+    if (len(askList) > 0):
+        currAsk=askList[0]<avgAsk
+        for i in range(len(askList)):
+            if currAsk != askList[i]<avgAsk:
+                crossAsk = crossAsk+1
+                currAsk = not(currAsk)
     return (list[0][0],crossBid,crossAsk)
 
             
