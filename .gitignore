@@ -56,3 +56,5 @@ target/
 *.out
 
 sas_data/
+
+.local_data/
