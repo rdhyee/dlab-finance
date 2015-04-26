@@ -104,7 +104,7 @@ def processquote (record):
             # Output key Value pairs where
             # Key : (<Stock Ticker>, <Time in seconds>)
             # Value : (<record-index>,<bid-price>,<ask-price>,<best-bid>,<best-ask>)
-            nbbolist.append((record[0]+'\t'+list1[i][1],(idx,list1[i][2],list1[i][4],max(bidList),min(askList))))
+            nbbolist.append(((record[0],list1[i][1]),(idx,list1[i][2],list1[i][4],max(bidList),min(askList))))
     return crossingslist
 
 if __name__ == "__main__":
@@ -122,5 +122,5 @@ if __name__ == "__main__":
                                     rec[0][67],
                                     rec[0][68],
                                     rec[0][87]))).groupByKey()
-    result = data3.flatMap(lambda records: processquote(records))
+    result = data3.flatMap(lambda records: processquote(records)).map(lambda rec: [rec[0][0],rec[0][1],rec[1],rec[2]])
     result.saveAsTextFile(outputDir)
