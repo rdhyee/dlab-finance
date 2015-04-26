@@ -1,0 +1,4 @@
+tail -n +2 /global/scratch/rsoni/sparkinput/taqquote20100104 > /global/scratch/rsoni/sparkinput/taqquote20100104.r && mv -f /global/scratch/rsoni/sparkinput/taqquote20100104.r /global/scratch/rsoni/sparkinput/taqquote20100104
+tail -n +2 /global/scratch/rsoni/sparkinput/taqquote20100105 > /global/scratch/rsoni/sparkinput/taqquote20100105.r && mv -f /global/scratch/rsoni/sparkinput/taqquote20100105.r /global/scratch/rsoni/sparkinput/taqquote20100105
+tail -n +2 /global/scratch/rsoni/sparkinput/taqquote20100106 > /global/scratch/rsoni/sparkinput/taqquote20100106.r && mv -f /global/scratch/rsoni/sparkinput/taqquote20100106.r /global/scratch/rsoni/sparkinput/taqquote20100106
+tail -n +2 /global/scratch/rsoni/sparkinput/taqquote20100107 > /global/scratch/rsoni/sparkinput/taqquote20100107.r && mv -f /global/scratch/rsoni/sparkinput/taqquote20100107.r /global/scratch/rsoni/sparkinput/taqquote20100107

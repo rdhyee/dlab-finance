@@ -1,0 +1,4 @@
+unzip /global/home/users/davclark/taq-mirror/EQY_US_ALL_BBO/EQY_US_ALL_BBO_2010/EQY_US_ALL_BBO_201001/EQY_US_ALL_BBO_20100104.zip -d /global/scratch/rsoni/sparkinput
+unzip /global/home/users/davclark/taq-mirror/EQY_US_ALL_BBO/EQY_US_ALL_BBO_2010/EQY_US_ALL_BBO_201001/EQY_US_ALL_BBO_20100105.zip -d /global/scratch/rsoni/sparkinput
+unzip /global/home/users/davclark/taq-mirror/EQY_US_ALL_BBO/EQY_US_ALL_BBO_2010/EQY_US_ALL_BBO_201001/EQY_US_ALL_BBO_20100106.zip -d /global/scratch/rsoni/sparkinput
+unzip /global/home/users/davclark/taq-mirror/EQY_US_ALL_BBO/EQY_US_ALL_BBO_2010/EQY_US_ALL_BBO_201001/EQY_US_ALL_BBO_20100107.zip -d /global/scratch/rsoni/sparkinput
