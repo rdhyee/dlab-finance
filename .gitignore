@@ -56,5 +56,5 @@ target/
 *.out
 
 sas_data/
-
+.ipynb_checkpoints/
 local_data/

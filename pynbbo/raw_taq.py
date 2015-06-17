@@ -38,6 +38,9 @@ initial_dtype = [('Time', 'S9'),  # HHMMSSmmm, should be in Eastern Time (ET)
                  ('National_BBO_LULD_Indicator', 'S1'),
                  ('newline', 'S2')]
 
+# This could be computed from the above bytes?
+BYTES_PER_LINE = 98
+
 # Justin and Pandas (I think) use time64, as does PyTables.
 # We could use msec from beginning of day for now in an int16
 # (maybe compare performance to datetime64? But dates should compress very well...)
@@ -105,26 +108,35 @@ for name, dtype in initial_dtype:
     elif name in passthrough_strings:
         easy_dtype.append( (name, dtype) )
 
-# PyTables will not accept np.datetime64, we hack below, but we use it to work with the blaze
-# function above.
-# We also shift Time to the end (while I'd rather maintain order), as it's more efficient for Dav
-# given the technical debt he's already built up.
+# PyTables will not accept np.datetime64, we hack below, but we use it to work
+# with the blaze function above.
+# We also shift Time to the end (while I'd rather maintain order), as it's more
+# efficient for Dav given the technical debt he's already built up.
 pytables_dtype = easy_dtype + [('Time', 'datetime64[ms]')]
+pytables_desc = dtype_to_pytables( np.dtype(pytables_dtype) )
 
-pytables_desc = dtype_to_pytables(
-                    np.dtype(pytables_dtype) )
 
-class TAQ2HDF5:
+# TODO HDF5 will be broken for now
+class TAQ2Chunks:
+    '''Read in raw TAQ BBO file, and return numpy chunks (cf. odo)'''
 
     def __init__(self, taq_fname):
         self.taq_fname = taq_fname
 
-    def convert_taq(self):
-        # The below doesn't work for pandas (and neither does `unzip` from the command line). Probably want to use
-        # something like `7z x -so my_file.zip 2> /dev/null` if we use pandas.
+    def convert_taq(self, chunksize=None):
+        '''Return a generator that yields chunks
+
+        chunksize : int
+            Number of rows in each chunk
+        '''
+        # The below doesn't work for pandas (and neither does `unzip` from the
+        # command line). Probably want to use something like `7z x -so
+        # my_file.zip 2> /dev/null` if we use pandas.
         with ZipFile(self.taq_fname) as zfile:
             for inside_f in zfile.filelist:
                 # The original filename is available as inside_f.filename
+                self.infile_name = inside_f.filename
+
                 with zfile.open(inside_f.filename) as infile:
                     first = infile.readline()
 
@@ -138,24 +150,7 @@ class TAQ2HDF5:
                     self.day = int(dateish[4:6])
                     self.year = int(dateish[6:10])
 
-                    # Should I use a context manager here?
-                    h5_table = self.setup_hdf5(inside_f.filename, numlines)
-                    try:
-                        self.raw_conversion(numlines, infile, h5_table)
-                    finally:
-                        self.finalize_hdf5()
-
-    def setup_hdf5(self, h5_fname_root, numlines):
-        # We're using aggressive compression and checksums, since this will likely stick around
-        # Stopping one level short of max compression - don't be greedy.
-        self.h5 = tb.open_file(h5_fname_root + '.h5', title=h5_fname_root, mode='w',
-                          filters=tb.Filters(complevel=8, complib='blosc:lz4hc', fletcher32=True) )
-
-        return self.h5.create_table('/', 'daily_quotes', description=pytables_desc, expectedrows=numlines)
-
-
-    def finalize_hdf5(self):
-        self.h5.close()
+                    return self.to_chunks(numlines, infile, chunksize)
 
     def process_chunk(self, all_strings):
         # This is unnecessary copying
@@ -165,26 +160,25 @@ class TAQ2HDF5:
         for dollar_col in ['Bid_Price', 'Ask_Price']:
             easy_converted[dollar_col] /= 10000
 
-        # Currently, there doesn't seem to be any utility to converting to numpy.datetime64
-        # PyTables wants float64's corresponding to the POSIX Standar (relative to 1970-01-01, UTC)
-        converted_time = [datetime( self.year, self.month, self.day,
-                                     int(raw[:2]), int(raw[2:4]), int(raw[4:6]),
-                                     int(raw[6:9]) * 1000,  # msec needs to be microsec
-                                     tzinfo=timezone('US/Eastern') ).timestamp()
+        # Currently, there doesn't seem to be any utility to converting to
+        # numpy.datetime64 PyTables wants float64's corresponding to the POSIX
+        # Standard (relative to 1970-01-01, UTC)
+        converted_time = [datetime(self.year, self.month, self.day,
+                                   int(raw[:2]), int(raw[2:4]), int(raw[4:6]),
+                                   # msec must be converted to  microsec
+                                   int(raw[6:9]) * 1000,
+                                   tzinfo=timezone('US/Eastern') ).timestamp()
                           for raw in all_strings['Time'] ]
 
-
         # More unnecessary copying
-        records = recfunctions.append_fields(easy_converted, 'Time', converted_time, usemask=False)
+        records = recfunctions.append_fields(easy_converted, 'Time',
+                                             converted_time, usemask=False)
 
         return records
 
-
-    # at some point, we might optimize chunksize. For now, assume PyTables is smart
-    def raw_conversion(self, numlines, infile, out, chunksize=None):
-        '''Read raw bytes from TAQ, write to HDF5'''
-        if chunksize is None:
-            chunksize = out.chunkshape[0]
+    def to_chunks(self, numlines, infile, chunksize=None):
+        '''Do the conversion of bytes to numpy "chunks"'''
+        # Should do check on numlines to make sure we get the right number
 
         while(True):
             raw_bytes = infile.read(BYTES_PER_LINE * chunksize)
@@ -197,7 +191,42 @@ class TAQ2HDF5:
             # This approach doesn't work...
             # out[chunk_start:chunk_stop, 1:] = all_strings[:,1:-1]
 
-            out.append( self.process_chunk(all_strings) )
+            yield self.process_chunk(all_strings)
+
+    # Everything from here down is HDF5 specific
+    # def setup_hdf5(self, h5_fname_root, numlines):
+    #     # We're using aggressive compression and checksums, since this will
+    #     # likely stick around Stopping one level short of max compression -
+    #     # don't be greedy.
+    #     self.h5 = tb.open_file(h5_fname_root + '.h5', title=h5_fname_root,
+    #                            mode='w', filters=tb.Filters(complevel=8,
+    #                                                         complib='blosc:lz4hc',
+    #                                                         fletcher32=True) )
+
+    #     return self.h5.create_table('/', 'daily_quotes', description=pytables_desc, expectedrows=numlines)
+
+
+    # def finalize_hdf5(self):
+    #     self.h5.close()
+
+
+    # def to_hdf5(self, numlines, infile, out, chunksize=None):
+    #     '''Read raw bytes from TAQ, write to HDF5'''
+
+    #     # Should I use a context manager here?
+    #     h5_table = self.setup_hdf5(inside_f.filename, numlines)
+    #     try:
+    #         self.to_hdf5(numlines, infile, h5_table)
+    #     finally:
+    #         self.finalize_hdf5()
+
+    #     # at some point, we might optimize chunksize. For now, assume PyTables is smart
+    #     if chunksize is None:
+    #         chunksize = out.chunkshape[0]
+
+    #     for chunk in self.to_chunks(numlines, infile, chunksize):
+    #         out.append(chunk)
+
 
 if __name__ == '__main__':
     from sys import argv
@@ -209,5 +238,5 @@ if __name__ == '__main__':
         # Grab the first BBO file we can find
         fname = glob('../local_data/EQY_US_ALL_BBO_*.zip')[0]
 
-    test_run = TAQ2HDF5(fname)
-    test_run.convert_taq()
+    test_run = TAQ2Chunks(fname)
+    test_run.to_hdf5()
