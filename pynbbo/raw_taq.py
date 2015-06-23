@@ -38,7 +38,8 @@ initial_dtype = [('Time', 'S9'),  # HHMMSSmmm, should be in Eastern Time (ET)
                  ('National_BBO_LULD_Indicator', 'S1'),
                  ('newline', 'S2')]
 
-# This could be computed from the above bytes?
+# This could be computed from the above bytes? - Would be easy if we change the
+# above to a more convenient format.
 BYTES_PER_LINE = 98
 
 # Justin and Pandas (I think) use time64, as does PyTables.
