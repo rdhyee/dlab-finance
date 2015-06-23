@@ -1,3 +1,5 @@
+# This file currently depends on python 3.3+
+
 from zipfile import ZipFile
 from datetime import datetime
 
@@ -15,13 +17,17 @@ initial_dtype = [('Time', 'S9'),  # HHMMSSmmm, should be in Eastern Time (ET)
                  # ('second', '|S2'),
                  # ('msec', '|S3'),
                  ('Exchange', 'S1'),
-                 ('Symbol', 'S16'),  # Maybe should split into 6 root + 10 suffix
+                 # Wikipedia has a nice explanation of symbols here:
+                 # https://en.wikipedia.org/wiki/Ticker_symbol
+                 ('Symbol_root', 'S6'),
+                 ('Symbol_suffix', 'S10'),
                  ('Bid_Price', 'S11'),  # 7.4 (fixed point)
                  ('Bid_Size', 'S7'),
                  ('Ask_Price', 'S11'),  # 7.4
                  ('Ask_Size', 'S7'),
                  ('Quote_Condition', 'S1'),
-                 ('Market_Maker', 'S4'),  # This ends up getting discarded, it should always be b'    '
+                 # Market_Maker ends up getting discarded, it should always be b'    '
+                 ('Market_Maker', 'S4'),
                  ('Bid_Exchange', 'S1'),
                  ('Ask_Exchange', 'S1'),
                  ('Sequence_Number', 'S16'),
@@ -59,7 +65,8 @@ convert_dtype = [
               ]
 
 passthrough_strings = ['Exchange',
-                     'Symbol',
+                     'Symbol_root',
+                     'Symbol_suffix',
                      'Quote_Condition',
                      'Bid_Exchange',
                      'Ask_Exchange',
@@ -151,7 +158,7 @@ class TAQ2Chunks:
                     self.day = int(dateish[4:6])
                     self.year = int(dateish[6:10])
 
-                    return self.to_chunks(numlines, infile, chunksize)
+                    yield from self.chunks(numlines, infile, chunksize)  # noqa
 
     def process_chunk(self, all_strings):
         # This is unnecessary copying
@@ -177,7 +184,7 @@ class TAQ2Chunks:
 
         return records
 
-    def to_chunks(self, numlines, infile, chunksize=None):
+    def chunks(self, numlines, infile, chunksize=None):
         '''Do the conversion of bytes to numpy "chunks"'''
         # Should do check on numlines to make sure we get the right number
 
