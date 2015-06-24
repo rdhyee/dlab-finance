@@ -149,9 +149,14 @@ class TAQ2Chunks:
                     first = infile.readline()
 
                     # You need to use bytes to split bytes
-                    dateish, numlines = first.split(b":")
-                    numlines = int(numlines)
-
+                    # some files (probably older files do not have a record count)
+                    try:
+                        dateish, numlines = first.split(b":")
+                        numlines = int(numlines)
+                    except:
+                        dateish = first
+                        numlines = None
+               
                     # Get dates to combine with times later
                     # This is a little over-trusting of the spec...
                     self.month = int(dateish[2:4])
