@@ -21,16 +21,17 @@ def print_stats(chunk):
         mod_price = mode(chunk['Bid_Price'])
     except StatisticsError:
         mod_price = np.nan
-        
+
     #find the sd of bid price
     sd_price = np.std(chunk['Bid_Price'])
 
-    print("Max bid price: ", max_price, "\n", "Min bid price: ", min_price, "\n", 
+    print("Max bid price: ", max_price, "\n", "Min bid price: ", min_price, "\n",
           "Mean bid price: ", avg_price, "\n", "Mod bid price: ", mod_price, "\n",
           "Standard deviation bid price: ", sd_price)
 
 # I grab the [0]'th fname in the glob
-fname = glob('../local_data/EQY_US_ALL_BBO_*.zip')[0]
+# fname = glob('../local_data/EQY_US_ALL_BBO_*.zip')[0]
+fname = '../local_data/EQY_US_ALL_BBO_20150102.zip'
 local_taq = raw_taq.TAQ2Chunks(fname)
 
 chunk_gen = local_taq.convert_taq(20)
@@ -47,14 +48,14 @@ for chunk in chunk_gen:
     else:
         same = chunk[where_symbol]
         accum.append(pd.DataFrame(same))
-        
+
         # Compute the stats
         print('Current symbol:', curr_symbol, len(curr_symbol), 'records')
         print_stats(accum)
         processed_symbols += 1
         if processed_symbols > 3:
             break
-        
+
         diff = chunk[~where_symbol]
         accum = pd.DataFrame(diff)
         curr_symbol = accum.Symbol_root[0]
