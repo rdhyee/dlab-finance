@@ -30,7 +30,7 @@ def print_stats(chunk):
           "Standard deviation bid price: ", sd_price)
 
 # I grab the [0]'th fname in the glob
-fname = glob('/global/home/users/jli4869/work/dlab-finance/local_data/EQY_US_ALL_BBO_*.zip')[0]
+fname = '../local_data/EQY_US_ALL_BBO_20140206.zip'
 local_taq = raw_taq.TAQ2Chunks(fname)
 
 chunk_gen = local_taq.convert_taq(20)
