@@ -15,4 +15,4 @@
 #SBATCH --qos=dlab_normal
 #
 ## Run command
-python raw_taq_local.py
+python run.py
