@@ -2,7 +2,7 @@ from glob import glob
 import raw_taq
 import pandas as pd
 import numpy as np
-from statistics import mode
+from Statistics import mode, StatisticsError
 from importlib import reload
 reload(raw_taq)
 
@@ -30,7 +30,6 @@ def print_stats(chunk):
           "Standard deviation bid price: ", sd_price)
 
 # I grab the [0]'th fname in the glob
-# fname = glob('../local_data/EQY_US_ALL_BBO_*.zip')[0]
 fname = '../local_data/EQY_US_ALL_BBO_20150102.zip'
 local_taq = raw_taq.TAQ2Chunks(fname)
 
