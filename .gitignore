@@ -58,3 +58,4 @@ target/
 .ipynb_checkpoints/
 local_data/
 docs/copyrighted/
+*.h5
