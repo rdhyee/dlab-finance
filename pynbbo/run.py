@@ -2,7 +2,7 @@ from glob import glob
 import raw_taq
 import pandas as pd
 import numpy as np
-from Statistics import mode, StatisticsError
+from statistics import mode, StatisticsError
 from importlib import reload
 reload(raw_taq)
 
