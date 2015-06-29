@@ -55,6 +55,6 @@ target/
 # We don't want to track sbatch outputs
 *.out
 
-sas_data/
 .ipynb_checkpoints/
 local_data/
+docs/copyrighted/
