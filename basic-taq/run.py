@@ -34,11 +34,11 @@ def process_chunks(taq):
         where_symbol = curr_symbol == chunk['Symbol_root']      #logistical return for checking symbol_root
         if where_symbol.all():
             accum.append(pd.DataFrame(chunk))
-            row = len(pd.DataFrame(chunk))
+            row = row + 20
         else:
             same = chunk[where_symbol]
             accum.append(pd.DataFrame(same))
-            row = row + len(pd.DataFrame(same))
+            row = row + sum(where_symbol)
 
             print('Current symbol:', curr_symbol, len(curr_symbol), 'records ', row, 'rows')
             print_stats(accum)
@@ -47,12 +47,11 @@ def process_chunks(taq):
                 break
 
             diff = chunk[~where_symbol]
+            row = sum(~where_symbol)
             accum = pd.DataFrame(diff)
-            row = len(pd.DataFrame(diff))
             curr_symbol = accum.Symbol_root[0]
 
 if __name__ == '__main__':
-    # I grab the [0]'th fname in the glob
     # fname = '../local_data/EQY_US_ALL_BBO_20150102.zip'
     # fname = '../local_data/EQY_US_ALL_BBO_20140206.zip'
     from sys import argv
