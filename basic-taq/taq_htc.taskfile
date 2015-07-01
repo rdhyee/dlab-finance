@@ -1,8 +1,10 @@
-#!/bin/bash
-#SBATCH --job-name=taq_htc
-#SBATCH --partition=savio
-#SBATCH --account=co_dlab
-#SBATCH --qos=dlab_normal
-#SBATCH --ntasks=10
-#SBATCH --time=00:15:00
-ht_helper.sh -t taq_htc.taskfile -n1 -dvk
+./run.py 02
+./run.py 05
+./run.py 06
+./run.py 07
+./run.py 08
+./run.py 09
+./run.py 12
+./run.py 13
+./run.py 14
+./run.py 15
