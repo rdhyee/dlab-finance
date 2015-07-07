@@ -43,7 +43,7 @@ def process_chunks(taq):
             print('Current symbol:', curr_symbol, len(curr_symbol), 'records ', row, 'rows')
             print_stats(accum)
             processed_symbols += 1
-            if processed_symbols > 3:
+            if processed_symbols > 2:
                 break
 
             diff = chunk[~where_symbol]
@@ -52,11 +52,8 @@ def process_chunks(taq):
             curr_symbol = accum.Symbol_root[0]
 
 if __name__ == '__main__':
-    # fname = '../local_data/EQY_US_ALL_BBO_20150102.zip'
-    # fname = '../local_data/EQY_US_ALL_BBO_20140206.zip'
     from sys import argv
-    fname = '../local_data/EQY_US_ALL_BBO_201501' + argv[1] + '.zip'
-    print("processing", fname)
-    
+    fname = '../local_data/EQY_US_ALL_BBO_201402' + argv[1] + '.zip'
+    #print("processing", fname)
     local_taq = raw_taq.TAQ2Chunks(fname)
     process_chunks(local_taq)
