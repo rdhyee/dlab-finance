@@ -105,30 +105,34 @@ if __name__ == '__main__':
 
     t0 = time.time()
 
-    # fname = "/global/scratch/aculich/mirror/EQY_US_ALL_BBO/EQY_US_ALL_BBO_2015/EQY_US_ALL_BBO_201501/EQY_US_ALL_BBO_20150102.zip"
-    chunks = raw_taq.TAQ2Chunks(args.fname,chunksize=1, process_chunk=False)
- 
-    c = count_chunk_elements1(args.fname, max_chunk=max_chunk)
-
-    # write the output file
-
-    file_dt = bbo_path_to_datetime(args.fname)
-    (year, month, day) = arrow.get(file_dt).timetuple()[0:3]
-    ts = timestamp_for_trading_date(year, month, day)
-
+    # do the calculation only lif h5_path doesn't exist
 
     h5_path = "/global/scratch/ryee/symbol_count/output/{year:04d}{month:02d}{day:02d}.h5".format(year=year, 
-               month=month, day=day)
+               month=month, day=day)    
 
-    print(file_dt, ts, h5_path)
-    write_h5_for_counter(c, ts, h5_path)
+    if not os.path.exists(h5_path):
+
+        chunks = raw_taq.TAQ2Chunks(args.fname,chunksize=1, process_chunk=False)
+     
+        c = count_chunk_elements1(args.fname, max_chunk=max_chunk)
+
+        # write the output file
+
+        file_dt = bbo_path_to_datetime(args.fname)
+        (year, month, day) = arrow.get(file_dt).timetuple()[0:3]
+        ts = timestamp_for_trading_date(year, month, day)
 
 
-    print("total number of records", sum(c.values()))
+        print(file_dt, ts, h5_path)
+        write_h5_for_counter(c, ts, h5_path)
+
+
+        print("total number of records", sum(c.values()))
+        for (i,(k,v)) in enumerate(islice(c.most_common(),100)):
+            print ("\t".join([str(i), k.decode('utf-8').strip(), str(v)]))        
 
     t1 = time.time()
     print ("timing:", t0, t1, t1-t0)
 
-    for (i,(k,v)) in enumerate(islice(c.most_common(),100)):
-        print ("\t".join([str(i), k.decode('utf-8').strip(), str(v)]))
+    
 
