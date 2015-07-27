@@ -1,6 +1,7 @@
 #!/global/home/users/ryee/miniconda/envs/myenv3/bin/python
 
 from glob import glob
+import os
 from itertools import (islice, zip_longest)
 from collections import Counter
 from sys import argv
@@ -107,8 +108,16 @@ if __name__ == '__main__':
 
     # do the calculation only lif h5_path doesn't exist
 
+    file_dt = bbo_path_to_datetime(args.fname)
+    (year, month, day) = arrow.get(file_dt).timetuple()[0:3]
+    ts = timestamp_for_trading_date(year, month, day)
+
+
     h5_path = "/global/scratch/ryee/symbol_count/output/{year:04d}{month:02d}{day:02d}.h5".format(year=year, 
-               month=month, day=day)    
+               month=month, day=day) 
+    timing_path = "/global/scratch/ryee/symbol_count/timing/{year:04d}{month:02d}{day:02d}.txt".format(year=year, 
+               month=month, day=day)     
+
 
     if not os.path.exists(h5_path):
 
@@ -118,21 +127,19 @@ if __name__ == '__main__':
 
         # write the output file
 
-        file_dt = bbo_path_to_datetime(args.fname)
-        (year, month, day) = arrow.get(file_dt).timetuple()[0:3]
-        ts = timestamp_for_trading_date(year, month, day)
-
 
         print(file_dt, ts, h5_path)
         write_h5_for_counter(c, ts, h5_path)
 
 
         print("total number of records", sum(c.values()))
-        for (i,(k,v)) in enumerate(islice(c.most_common(),100)):
-            print ("\t".join([str(i), k.decode('utf-8').strip(), str(v)]))        
+        # for (i,(k,v)) in enumerate(islice(c.most_common(),100)):
+        #     print ("\t".join([str(i), k.decode('utf-8').strip(), str(v)]))        
 
-    t1 = time.time()
-    print ("timing:", t0, t1, t1-t0)
+        t1 = time.time()
+        print ("timing:", t0, t1, t1-t0)
+        with open(timing_path, "w") as tfile:
+            tfile.write("{0},{1},{2}".format(t0,t1,t1-t0))
 
     
 

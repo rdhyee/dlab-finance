@@ -46,9 +46,22 @@ def taq_files_in_range(root, min_dt=None, max_dt=None):
             if re.search(r'(\d{4})(\d{2})(\d{2}).zip', filename):
                 fpath = os.path.join(root, filename)
                 dt = bbo_path_to_datetime(fpath)
-                if not(((min_dt is not None) and dt < min_dt) or ((max_dt is not None) and dt > max_dt))):
+                if not(((min_dt is not None) and dt < min_dt) or ((max_dt is not None) and dt > max_dt)):
                     yield fpath
 
-for (i,f) in enumerate(islice(standard_taq_files("/global/scratch/aculich/mirror/EQY_US_ALL_BBO"),None)):
-    print (i,f)
+def write_taskfile(fname="/global/scratch/ryee/symbol_count/taskfile", 
+                   task="/global/home/users/ryee/dlab-finance/ry/symbol_count/count_symbols.py",
+                   min_dt=None,
+                   max_dt=None):
+
+    with open(fname, "w") as tfile:
+        for f in sorted(taq_files_in_range("/global/scratch/aculich/mirror/EQY_US_ALL_BBO", 
+                                                min_dt=min_dt,
+                                                max_dt=max_dt
+                                            )):
+            tfile.write("{0} {1}\n".format(task, f))
+
+
+if __name__ == "__main__":
+    write_taskfile(min_dt=datetime.datetime(2011,1,1), max_dt= datetime.datetime(2015,12,31))
 
