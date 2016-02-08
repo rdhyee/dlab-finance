@@ -121,8 +121,6 @@ if __name__ == '__main__':
 
     if not os.path.exists(h5_path):
 
-        chunks = raw_taq.TAQ2Chunks(args.fname,chunksize=1, process_chunk=False)
-     
         c = count_chunk_elements1(args.fname, max_chunk=max_chunk)
 
         # write the output file
